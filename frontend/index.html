@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speed Click Challenge</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      overflow: hidden;
+      color: white;
+      background: linear-gradient(135deg, #0f172b, #172554, #312e81);
+    }
+
+    #game {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      height: 105px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 30px;
+      background: rgba(0, 0, 0, 0.35);
+      border-bottom: 1px solid rgba(254, 255, 255, 0.15);
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input,
+    select,
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+    }
+
+    input,
+    select {
+      background: white;
+      color: #111827;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover:not(:disabled) {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #64748b;
+      cursor: not-allowed;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    /* Main game area */
+    #gameContent {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #gameArea {
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 300px;
+      bottom: 0;
+      overflow: hidden;
+    }
+
+    #centerMessage {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 2;
+    }
+
+    #target {
+      position: absolute;
+      display: none;
+      width: 75px;
+      height: 75px;
+      border-radius: 50%;
+      background: #ef4444;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      font-size: 35px;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+    }
+
+    .result {
+      position: absolute;
+      left: 50%;
+      bottom: 25px;
+      transform: translateX(-50%);
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    /* Scoreboard */
+    #scoreboard {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      width: 250px;
+      max-height: calc(100vh - 190px);
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 10px;
+      overflow-y: auto;
+    }
+
+    #scoreboard h2 {
+      margin: 0 0 12px 0;
+      text-align: center;
+      font-size: 20px;
+    }
+
+    #resetScoresButton {
+      width: 100%;
+      margin-bottom: 12px;
+      background: #ef4444;
+    }
+
+    #resetScoresButton:hover:not(:disabled) {
+      background: #dc2626;
+    }
+
+    .scoreCard {
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .scoreName {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .scoreNumber {
+      margin-top: 3px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .scoreDifficulty {
+      margin-top: 3px;
+      font-size: 13px;
+      opacity: 0.75;
+    }
+
+    .emptyScores {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+      padding: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="game">
+
+    <div class="header">
+
+      <div class="title">
+        Speed Click Challenge
+      </div>
+
+      <div class="controls">
+
+        <input
+          id="playerName"
+          placeholder="Enter player name"
+        >
+
+        <select id="backend">
+          <option value="spring" selected>
+            Spring Boot :8080
+          </option>
+
+          <option value="node">
+            Node.js :3000
+          </option>
+        </select>
+
+        <select id="difficulty">
+
+          <option value="easy">
+            Easy
+          </option>
+
+          <option value="medium" selected>
+            Medium
+          </option>
+
+          <option value="hard">
+            Hard
+          </option>
+
+        </select>
+
+        <button id="loadConfigButton">
+          Load Config
+        </button>
+
+        <button id="startButton" disabled>
+          Start Game
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div class="stats">
+
+      <div>
+        Time:
+        <span id="timeDisplay">0</span>
+      </div>
+
+      <div>
+        Score:
+        <span id="scoreDisplay">0</span>
+      </div>
+
+      <div>
+        High Score:
+        <span id="highScoreDisplay">0</span>
+      </div>
+
+    </div>
+
+
+    <div id="gameContent">
+
+      <div id="gameArea">
+
+        <div id="centerMessage">
+          Load config first.
+        </div>
+
+        <div id="target">
+          🎯
+        </div>
+
+        <div class="result" id="result"></div>
+
+      </div>
+
+
+      <div id="scoreboard">
+
+        <h2>
+          All Scores
+        </h2>
+
+        <button id="resetScoresButton">
+          Reset All Scores
+        </button>
+
+        <div id="scoresList">
+
+          <div class="emptyScores">
+            Loading scores...
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <script>
+
+    const playerName =
+      document.getElementById("playerName");
+
+    const backendSelect =
+      document.getElementById("backend");
+
+    const difficultySelect =
+      document.getElementById("difficulty");
+
+    const loadConfigButton =
+      document.getElementById("loadConfigButton");
+
+    const startButton =
+      document.getElementById("startButton");
+
+    const timeDisplay =
+      document.getElementById("timeDisplay");
+
+    const scoreDisplay =
+      document.getElementById("scoreDisplay");
+
+    const highScoreDisplay =
+      document.getElementById("highScoreDisplay");
+
+    const centerMessage =
+      document.getElementById("centerMessage");
+
+    const target =
+      document.getElementById("target");
+
+    const result =
+      document.getElementById("result");
+
+    const gameArea =
+      document.getElementById("gameArea");
+
+    const scoresList =
+      document.getElementById("scoresList");
+
+    const resetScoresButton =
+      document.getElementById("resetScoresButton");
+
+
+    let gameConfig = null;
+
+    let score = 0;
+
+    let timeLeft = 0;
+
+    let gameRunning = false;
+
+    let timer = null;
+
+    let moveTimer = null;
+
+
+    function getBaseUrl() {
+
+      if (backendSelect.value === "node") {
+        return "http://localhost:3000";
+      }
+
+      return "http://localhost:8080";
+    }
+
+
+    async function loadConfig() {
+
+      const difficulty =
+        difficultySelect.value;
+
+      const baseUrl =
+        getBaseUrl();
+
+      centerMessage.textContent =
+        "Loading config...";
+
+      result.textContent = "";
+
+
+      try {
+
+        const response =
+          await fetch(
+            baseUrl +
+            "/api/config/" +
+            difficulty
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "Config request failed"
+          );
+
+        }
+
+
+        gameConfig =
+          await response.json();
+
+
+        centerMessage.textContent =
+          "Config loaded from " +
+          gameConfig.backend;
+
+
+        startButton.disabled =
+          false;
+
+
+        timeDisplay.textContent =
+          gameConfig.gameTime;
+
+        scoreDisplay.textContent =
+          "0";
+
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        centerMessage.textContent =
+          "Could not connect to the backend.";
+
+
+        startButton.disabled =
+          true;
+      }
+    }
+
+
+    function moveTarget() {
+
+      const areaWidth =
+        gameArea.clientWidth;
+
+      const areaHeight =
+        gameArea.clientHeight;
+
+
+      const targetSize =
+        gameConfig.targetSize;
+
+
+      target.style.width =
+        targetSize + "px";
+
+      target.style.height =
+        targetSize + "px";
+
+
+      const maxX =
+        Math.max(
+          0,
+          areaWidth - targetSize
+        );
+
+
+      const maxY =
+        Math.max(
+          0,
+          areaHeight - targetSize
+        );
+
+
+      const x =
+        Math.random() * maxX;
+
+      const y =
+        Math.random() * maxY;
+
+
+      target.style.left =
+        x + "px";
+
+      target.style.top =
+        y + "px";
+    }
+
+
+    function startGame() {
+
+      if (!gameConfig) {
+        return;
+      }
+
+
+      score = 0;
+
+      timeLeft =
+        gameConfig.gameTime;
+
+      gameRunning =
+        true;
+
+
+      scoreDisplay.textContent =
+        score;
+
+      timeDisplay.textContent =
+        timeLeft;
+
+      result.textContent = "";
+
+
+      centerMessage.textContent = "";
+
+      target.style.display =
+        "flex";
+
+
+      moveTarget();
+
+
+      clearInterval(timer);
+
+      clearTimeout(moveTimer);
+
+
+      timer =
+        setInterval(() => {
+
+          timeLeft--;
+
+          timeDisplay.textContent =
+            timeLeft;
+
+
+          if (timeLeft <= 0) {
+
+            endGame();
+
+          }
+
+        }, 1000);
+
+
+      scheduleTargetMove();
+    }
+
+
+    function scheduleTargetMove() {
+
+      if (!gameRunning) {
+        return;
+      }
+
+
+      const speed =
+        gameConfig.targetSpeed;
+
+
+      if (speed <= 0) {
+        return;
+      }
+
+
+      moveTimer =
+        setTimeout(() => {
+
+          moveTarget();
+
+          scheduleTargetMove();
+
+        }, speed);
+    }
+
+
+    target.addEventListener(
+      "click",
+      () => {
+
+        if (!gameRunning) {
+          return;
+        }
+
+
+        score++;
+
+
+        scoreDisplay.textContent =
+          score;
+
+
+        moveTarget();
+
+
+        clearTimeout(moveTimer);
+
+        scheduleTargetMove();
+
+      }
+    );
+
+
+    async function endGame() {
+
+      gameRunning =
+        false;
+
+
+      clearInterval(timer);
+
+      clearTimeout(moveTimer);
+
+
+      target.style.display =
+        "none";
+
+
+      centerMessage.textContent =
+        "Game Over!";
+
+
+      result.textContent =
+        "Your score: " +
+        score;
+
+
+      const name =
+        playerName.value.trim() ||
+        "Player";
+
+
+      const baseUrl =
+        getBaseUrl();
+
+
+      try {
+
+        const response =
+          await fetch(
+            baseUrl + "/api/score",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+
+                name: name,
+
+                score: score,
+
+                difficulty:
+                  difficultySelect.value
+
+              })
+            }
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "Score request failed"
+          );
+
+        }
+
+
+        const data =
+          await response.json();
+
+
+        if (
+          data.highScore !==
+          undefined
+        ) {
+
+          highScoreDisplay.textContent =
+            data.highScore;
+
+        }
+
+
+        if (data.message) {
+
+          result.textContent =
+            data.message +
+            " Score: " +
+            score;
+
+        }
+
+
+        loadScores();
+
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        result.textContent =
+          "Game finished. Score: " +
+          score;
+
+      }
+    }
+
+
+    async function loadScores() {
+
+      const baseUrl =
+        getBaseUrl();
+
+
+      try {
+
+        const response =
+          await fetch(
+            baseUrl +
+            "/api/scores"
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "Could not load scores"
+          );
+
+        }
+
+
+        const scores =
+          await response.json();
+
+
+        scoresList.innerHTML =
+          "";
+
+
+        if (scores.length === 0) {
+
+          scoresList.innerHTML =
+            '<div class="emptyScores">' +
+            'No scores yet.' +
+            '</div>';
+
+
+          highScoreDisplay.textContent =
+            "0";
+
+
+          return;
+        }
+
+
+        highScoreDisplay.textContent =
+          scores[0].score;
+
+
+        scores.forEach(
+          (entry, index) => {
+
+            const card =
+              document.createElement(
+                "div"
+              );
+
+
+            card.className =
+              "scoreCard";
+
+
+            card.innerHTML =
+
+              "<div class='scoreName'>" +
+
+              (index + 1) +
+              ". " +
+
+              escapeHtml(
+                entry.name
+              ) +
+
+              "</div>" +
+
+
+              "<div class='scoreNumber'>" +
+
+              entry.score +
+
+              "</div>" +
+
+
+              "<div class='scoreDifficulty'>" +
+
+              escapeHtml(
+                entry.difficulty
+              ) +
+
+              "</div>";
+
+
+            scoresList.appendChild(
+              card
+            );
+
+          }
+        );
+
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        scoresList.innerHTML =
+          '<div class="emptyScores">' +
+          'Could not load scores.' +
+          '</div>';
+
+      }
+    }
+
+
+    function escapeHtml(text) {
+
+      const div =
+        document.createElement("div");
+
+
+      div.textContent =
+        text;
+
+
+      return div.innerHTML;
+    }
+
+
+    async function resetAllScores() {
+
+      const confirmed =
+        confirm(
+          "Are you sure you want to delete ALL scores?"
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      const baseUrl =
+        getBaseUrl();
+
+
+      try {
+
+        const response =
+          await fetch(
+            baseUrl +
+            "/api/scores/reset",
+            {
+              method: "POST"
+            }
+          );
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            "Could not reset scores"
+          );
+
+        }
+
+
+        await response.json();
+
+
+        highScoreDisplay.textContent =
+          "0";
+
+
+        scoresList.innerHTML =
+          '<div class="emptyScores">' +
+          'No scores yet.' +
+          '</div>';
+
+
+        result.textContent =
+          "All scores have been reset.";
+
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        result.textContent =
+          "Could not reset the scores.";
+
+      }
+    }
+
+
+    loadConfigButton.addEventListener(
+      "click",
+      loadConfig
+    );
+
+
+    startButton.addEventListener(
+      "click",
+      startGame
+    );
+
+
+    resetScoresButton.addEventListener(
+      "click",
+      resetAllScores
+    );
+
+
+    backendSelect.addEventListener(
+      "change",
+      loadScores
+    );
+
+
+    loadScores();
+
+  </script>
+
+</body>
+</html>
